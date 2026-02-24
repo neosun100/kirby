@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🟣 Kirby
+<img src="../kirby-logo.png" alt="Kirby Logo" width="180" />
+
+# Kirby
 
 **基于 Kiro CLI 的自主 AI Agent 迭代循环系统**
 

@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🟣 Kirby
+<img src="kirby-logo.png" alt="Kirby Logo" width="180" />
+
+# Kirby
 
 **Autonomous AI Agent Loop for Kiro CLI**
 

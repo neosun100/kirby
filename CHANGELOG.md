@@ -4,32 +4,40 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.0] - 2026-02-25
+
+### Added
+- GitHub badges: license, stars, forks, issues, last commit, tool support, PRs welcome
+- Star History chart at bottom of README
+- Collapsible `<details>` sections for examples and prd.json format
+- Third real-world example: Next.js team invitation system (4 stories)
+- Emoji section headers throughout both docs
+- Centered header with badge grid layout
+- Project structure tree in both docs
+
+### Changed
+- README.md fully redesigned to GitHub open-source best practices
+- docs/README_CN.md fully redesigned to match English version
+
 ## [1.1.0] - 2026-02-24
 
 ### Added
 - Chinese documentation (`docs/README_CN.md`)
-- Architecture diagram in README (ASCII art flowchart)
+- Architecture diagram (ASCII flowchart)
 - Real-world examples: REST API endpoint, database migration + UI
-- Tips & best practices section: story sizing, steering files, failure recovery
-- Comparison table: Kirby vs Ralph
-- Quick Start section with step-by-step instructions
-
-### Changed
-- README.md rewritten with richer content, examples, and usage tips
+- Tips & best practices: story sizing, steering files, failure recovery
+- Kirby vs Ralph comparison table
+- Quick Start section
 
 ## [1.0.0] - 2026-02-24
 
 ### Added
-- `kirby.sh` — Main autonomous loop script with support for `--tool kiro` (default), `--tool amp`, and `--tool claude`
-- `.kiro/agents/kirby.json` — Kiro CLI custom agent configuration with agentSpawn hooks for automatic context injection
-- `prompt.md` — Core iteration instructions for the AI agent
-- `AGENTS.md` — Project-level agent instructions (auto-loaded by Kiro)
-- `prd.json.example` — Example PRD format for reference
-- `skills/prd/SKILL.md` — Skill for generating Product Requirements Documents
-- `skills/kirby/SKILL.md` — Skill for converting PRDs to prd.json format
-- Dependency checking (jq, kiro-cli/amp/claude) before loop starts
-- `--help` flag for usage information
-- prd.json existence check before starting
-- Automatic archiving of previous runs when branch changes
-- ANSI escape code stripping for clean output parsing
-- COMPLETE signal detection (`<promise>COMPLETE</promise>`) for loop termination
+- `kirby.sh` — Main autonomous loop script (`--tool kiro|amp|claude`)
+- `.kiro/agents/kirby.json` — Kiro custom agent with agentSpawn hooks
+- `prompt.md` — Core iteration instructions
+- `AGENTS.md` — Project-level agent instructions (Kiro auto-loads)
+- `prd.json.example` — Example PRD format
+- `skills/prd/SKILL.md` — PRD generation skill
+- `skills/kirby/SKILL.md` — PRD → JSON conversion skill
+- Dependency checking, `--help`, prd.json existence check
+- Automatic archiving, ANSI stripping, COMPLETE signal detection

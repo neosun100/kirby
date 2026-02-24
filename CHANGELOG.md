@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.0] - 2026-02-24
+
+### Added
+- Chinese documentation (`docs/README_CN.md`)
+- Architecture diagram in README (ASCII art flowchart)
+- Real-world examples: REST API endpoint, database migration + UI
+- Tips & best practices section: story sizing, steering files, failure recovery
+- Comparison table: Kirby vs Ralph
+- Quick Start section with step-by-step instructions
+
+### Changed
+- README.md rewritten with richer content, examples, and usage tips
+
 ## [1.0.0] - 2026-02-24
 
 ### Added

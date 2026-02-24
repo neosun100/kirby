@@ -1,14 +1,50 @@
 # Kirby
 
-Kirby is an autonomous AI agent loop that runs [Kiro CLI](https://kiro.dev/cli/) repeatedly until all PRD items are complete. Each iteration is a fresh instance with clean context. Memory persists via git history, `progress.txt`, and `prd.json`.
+> Autonomous AI agent loop for [Kiro CLI](https://kiro.dev/cli/) — iteratively implements PRD stories until complete.
+
+[中文文档](docs/README_CN.md)
+
+Kirby spawns a fresh AI instance per iteration, picks the next incomplete user story from `prd.json`, implements it, runs quality checks, commits, and moves on. Memory persists across iterations via git history, `progress.txt`, and `prd.json`.
 
 Also supports [Amp](https://ampcode.com) and [Claude Code](https://docs.anthropic.com/en/docs/claude-code) as alternative backends.
 
 Based on [Geoffrey Huntley's Ralph pattern](https://ghuntley.com/ralph/), redesigned for Kiro CLI with native Custom Agent, Hooks, and Steering integration.
 
+## How It Works
+
+```
+┌─────────────────────────────────────────────────────┐
+│                    kirby.sh loop                     │
+│                                                      │
+│  Iteration 1          Iteration 2          ...       │
+│  ┌──────────┐        ┌──────────┐                    │
+│  │ Fresh AI  │        │ Fresh AI  │                   │
+│  │ instance  │        │ instance  │                   │
+│  │           │        │           │                   │
+│  │ Read PRD  │        │ Read PRD  │                   │
+│  │ Pick US-1 │        │ Pick US-2 │                   │
+│  │ Implement │        │ Implement │                   │
+│  │ Test      │        │ Test      │                   │
+│  │ Commit    │        │ Commit    │                   │
+│  │ Update    │        │ Update    │                   │
+│  └──────────┘        └──────────┘                    │
+│       │                    │                          │
+│       ▼                    ▼                          │
+│  ┌─────────────────────────────────────┐             │
+│  │  Shared Memory (files on disk)      │             │
+│  │  • prd.json    (story status)       │             │
+│  │  • progress.txt (learnings)         │             │
+│  │  • git history  (code changes)      │             │
+│  │  • AGENTS.md    (patterns)          │             │
+│  └─────────────────────────────────────┘             │
+│                                                      │
+│  All stories passes:true? ──yes──▶ EXIT SUCCESS      │
+└─────────────────────────────────────────────────────┘
+```
+
 ## Prerequisites
 
-- [Kiro CLI](https://kiro.dev/cli/) installed and authenticated (default)
+- [Kiro CLI](https://kiro.dev/cli/) installed and authenticated
   ```bash
   curl -fsSL https://cli.kiro.dev/install | bash
   ```
@@ -19,19 +55,25 @@ Optional alternative backends:
 - [Amp CLI](https://ampcode.com) (`--tool amp`)
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (`--tool claude`)
 
-## Quick Start
+## Quick Start (5 minutes)
 
 ```bash
-# 1. Copy kirby files to your project
-cp kirby.sh prompt.md AGENTS.md /path/to/your-project/
-cp -r .kiro /path/to/your-project/
-chmod +x /path/to/your-project/kirby.sh
+# 1. Clone kirby
+git clone https://github.com/neosun100/kirby.git
 
-# 2. Create prd.json (copy and edit the example, or use the kirby skill)
-cp prd.json.example /path/to/your-project/prd.json
+# 2. Copy to your project
+cd your-project
+cp /path/to/kirby/kirby.sh .
+cp /path/to/kirby/prompt.md .
+cp /path/to/kirby/AGENTS.md .
+cp -r /path/to/kirby/.kiro .kiro
+chmod +x kirby.sh
 
-# 3. Run
-cd /path/to/your-project
+# 3. Create your prd.json (see examples below, or use the skill)
+cp /path/to/kirby/prd.json.example prd.json
+# Edit prd.json with your actual stories...
+
+# 4. Run
 ./kirby.sh
 ```
 
@@ -46,175 +88,322 @@ Options:
 
 Arguments:
   max_iterations           Maximum loop iterations (default: 10)
-
-Examples:
-  ./kirby.sh               # Kiro, 10 iterations
-  ./kirby.sh 20            # Kiro, 20 iterations
-  ./kirby.sh --tool amp 5  # Amp, 5 iterations
 ```
 
-## Setup
-
-### Option 1: Copy to your project
-
+**Examples:**
 ```bash
-mkdir -p scripts/kirby
-cp kirby.sh prompt.md scripts/kirby/
-cp -r .kiro .kiro
-cp AGENTS.md AGENTS.md
-chmod +x scripts/kirby/kirby.sh
+./kirby.sh                 # Kiro CLI, 10 iterations
+./kirby.sh 20              # Kiro CLI, 20 iterations
+./kirby.sh --tool amp 5    # Amp, 5 iterations
+./kirby.sh --tool claude   # Claude Code, 10 iterations
 ```
 
-### Option 2: Install Kiro agent globally
+## Complete Workflow
 
-```bash
-cp .kiro/agents/kirby.json ~/.kiro/agents/
-```
+### Step 1: Write a PRD
 
-The agent will be available in all projects via `kiro-cli --agent kirby`.
-
-### Option 3: Install skills globally
-
-```bash
-mkdir -p ~/.kiro/skills
-cp -r skills/prd ~/.kiro/skills/
-cp -r skills/kirby ~/.kiro/skills/
-```
-
-## Workflow
-
-### 1. Create a PRD
-
-Use the PRD skill to generate a detailed requirements document:
+You can write `prd.json` manually, or use the Kiro skill:
 
 ```
-Load the prd skill and create a PRD for [your feature description]
+> Load the prd skill and create a PRD for adding a dark mode toggle to my React app
 ```
 
-The skill saves output to `tasks/prd-[feature-name].md`.
+The skill asks clarifying questions, then saves a structured PRD to `tasks/prd-dark-mode.md`.
 
-### 2. Convert PRD to Kirby format
+### Step 2: Convert to prd.json
 
 ```
-Load the kirby skill and convert tasks/prd-[feature-name].md to prd.json
+> Load the kirby skill and convert tasks/prd-dark-mode.md to prd.json
 ```
 
-This creates `prd.json` with user stories structured for autonomous execution.
+Or write it manually — here's the format:
 
-### 3. Run Kirby
+```json
+{
+  "project": "MyApp",
+  "branchName": "kirby/dark-mode",
+  "description": "Add dark mode toggle",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add theme context",
+      "description": "As a developer, I need a React context for theme state.",
+      "acceptanceCriteria": [
+        "ThemeContext provides 'light' and 'dark' values",
+        "ThemeProvider wraps the app in _app.tsx",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Add toggle button to header",
+      "description": "As a user, I want a button to switch between light and dark mode.",
+      "acceptanceCriteria": [
+        "Toggle button visible in header",
+        "Clicking toggles between light/dark",
+        "Preference persists in localStorage",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
+```
+
+### Step 3: Run Kirby
 
 ```bash
 ./kirby.sh
 ```
 
-Kirby will:
-1. Create a feature branch (from PRD `branchName`)
-2. Pick the highest priority story where `passes: false`
-3. Implement that single story
-4. Run quality checks (typecheck, tests)
-5. Commit if checks pass
-6. Update `prd.json` to mark story as `passes: true`
-7. Append learnings to `progress.txt`
-8. Repeat until all stories pass or max iterations reached
+Watch as Kirby autonomously implements each story, one per iteration.
+
+### Step 4: Review & Push
+
+```bash
+# Check what Kirby did
+git log --oneline
+cat prd.json | jq '.userStories[] | {id, title, passes}'
+cat progress.txt
+
+# Push when satisfied
+git push origin kirby/dark-mode
+```
+
+## Real-World Examples
+
+### Example 1: Add a REST API endpoint
+
+```json
+{
+  "project": "ExpressAPI",
+  "branchName": "kirby/user-search",
+  "description": "Add user search endpoint",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add search query to user repository",
+      "description": "Add a findByName method to the user repository.",
+      "acceptanceCriteria": [
+        "UserRepository has findByName(query: string) method",
+        "Returns users where name contains query (case-insensitive)",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Add GET /api/users/search endpoint",
+      "description": "Expose user search via REST API.",
+      "acceptanceCriteria": [
+        "GET /api/users/search?q=john returns matching users",
+        "Returns 400 if q param is missing",
+        "Returns empty array if no matches",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
+```
+
+### Example 2: Database migration + UI
+
+```json
+{
+  "project": "TaskApp",
+  "branchName": "kirby/task-tags",
+  "description": "Add tagging system to tasks",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create tags table and junction table",
+      "description": "Database schema for many-to-many task-tag relationship.",
+      "acceptanceCriteria": [
+        "tags table with id, name, color columns",
+        "task_tags junction table with task_id, tag_id",
+        "Migration runs successfully",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Add tag CRUD server actions",
+      "description": "Backend logic for creating, reading, deleting tags.",
+      "acceptanceCriteria": [
+        "createTag(name, color) action works",
+        "getTags() returns all tags",
+        "deleteTag(id) removes tag and junction entries",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Display tags on task cards",
+      "description": "Show assigned tags as colored badges on each task card.",
+      "acceptanceCriteria": [
+        "Tags display as colored badges on task cards",
+        "Maximum 3 tags shown, +N for overflow",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
+```
+
+## Tips & Best Practices
+
+### Writing Good Stories
+
+| Do | Don't |
+|----|-------|
+| "Add `status` column with default 'pending'" | "Make the database better" |
+| "Button shows confirmation dialog before delete" | "Good UX for deletion" |
+| One focused change per story | Multiple unrelated changes |
+| Include "Typecheck passes" in every story | Forget quality checks |
+| Order by dependency (schema → backend → UI) | Put UI before its backend |
+
+### Sizing Stories Right
+
+**Rule of thumb:** If you can't describe the change in 2-3 sentences, split it.
+
+```
+❌ "Build the user dashboard"
+
+✅ Split into:
+   US-001: Add dashboard route and empty page component
+   US-002: Add stats query (total users, active today, new this week)
+   US-003: Add stats cards to dashboard page
+   US-004: Add recent activity list component
+   US-005: Add activity list to dashboard page
+```
+
+### Using Steering Files
+
+Create `.kiro/steering/` files to give Kirby project-specific knowledge:
+
+```markdown
+<!-- .kiro/steering/tech-stack.md -->
+# Tech Stack
+- Framework: Next.js 14 with App Router
+- Database: PostgreSQL with Drizzle ORM
+- Styling: Tailwind CSS
+- Testing: Vitest + React Testing Library
+- Always use server actions, not API routes
+```
+
+```markdown
+<!-- .kiro/steering/conventions.md -->
+# Conventions
+- Components in src/components/ with PascalCase filenames
+- Server actions in src/actions/ with camelCase filenames
+- Use `cn()` utility for conditional classnames
+- All database queries go through repository pattern in src/db/
+```
+
+### Recovering from Failures
+
+If Kirby gets stuck on a story:
+
+```bash
+# Check what happened
+cat progress.txt | tail -30
+cat prd.json | jq '.userStories[] | select(.passes == false) | {id, title}'
+
+# Option 1: Fix manually and mark as done
+# Edit prd.json, set passes: true for the stuck story
+
+# Option 2: Add hints to the story notes
+# Edit prd.json, add guidance to the "notes" field:
+jq '.userStories[0].notes = "Use the existing Button component from src/components/ui"' prd.json > tmp && mv tmp prd.json
+
+# Option 3: Split the story into smaller pieces
+# Edit prd.json to break the stuck story into 2-3 smaller ones
+
+# Then re-run
+./kirby.sh
+```
+
+### Maximizing Iteration Efficiency
+
+1. **Start with good AGENTS.md** — Add your project's key patterns before the first run
+2. **Use steering files** — Tell Kirby about your tech stack and conventions
+3. **Keep stories atomic** — One change, one test, one commit
+4. **Review after each feature** — Check progress.txt for learnings, promote good ones to AGENTS.md
 
 ## How Kiro Integration Works
 
-Kirby leverages Kiro CLI features that go beyond simple prompt piping:
-
 ### Custom Agent (`.kiro/agents/kirby.json`)
 
-- **Allowed Tools**: `read`, `write`, `shell` pre-trusted — no confirmation prompts
+The Kirby agent configuration provides:
+- **Allowed Tools**: `read`, `write`, `shell` pre-trusted for autonomous operation
 - **Resources**: Automatically loads `AGENTS.md` and `.kiro/steering/` files
-- **agentSpawn Hook**: Injects git status, PRD progress, and recent learnings into context at startup — the AI doesn't need to manually read these
+- **agentSpawn Hook**: Injects git status, PRD progress, and recent learnings into context at startup
 
-### Steering Files
+### vs. Ralph (Amp/Claude Code)
 
-Place project-specific conventions in `.kiro/steering/`:
-```
-.kiro/steering/
-├── project.md      # Your project conventions
-├── tech-stack.md   # Framework/library preferences
-└── testing.md      # Testing patterns
-```
-
-Kiro automatically loads these into every iteration.
-
-### AGENTS.md
-
-Kiro natively supports the [AGENTS.md standard](https://agents.md/). Kirby updates these files with discovered patterns, and Kiro automatically reads them in future iterations.
+| Feature | Ralph | Kirby |
+|---------|-------|-------|
+| AI Tool | Amp or Claude Code | Kiro CLI (+ Amp, Claude) |
+| Prompt delivery | Pipe to stdin | Positional argument + agent config |
+| Tool permissions | `--dangerously-skip-permissions` | `--trust-all-tools` (granular) |
+| Context injection | Manual (AI reads files) | agentSpawn hook (automatic) |
+| Project knowledge | CLAUDE.md / prompt.md only | Steering files + AGENTS.md + hooks |
+| MCP support | Limited | Native |
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `kirby.sh` | The bash loop that spawns fresh AI instances |
-| `prompt.md` | Instructions given to each iteration |
-| `.kiro/agents/kirby.json` | Kiro custom agent configuration |
-| `prd.json` | User stories with `passes` status |
+| `kirby.sh` | Main loop script |
+| `prompt.md` | Per-iteration AI instructions |
+| `.kiro/agents/kirby.json` | Kiro custom agent config |
+| `prd.json` | User stories with pass/fail status |
 | `prd.json.example` | Example PRD format |
-| `progress.txt` | Append-only learnings for future iterations |
-| `AGENTS.md` | Project-level agent instructions (Kiro auto-loads) |
-| `skills/prd/` | Skill for generating PRDs |
-| `skills/kirby/` | Skill for converting PRDs to JSON |
-
-## Critical Concepts
-
-### Each Iteration = Fresh Context
-
-Each iteration spawns a **new AI instance** with clean context. The only memory between iterations is:
-- Git history (commits from previous iterations)
-- `progress.txt` (learnings and context)
-- `prd.json` (which stories are done)
-- `AGENTS.md` (discovered patterns, auto-loaded by Kiro)
-
-### Small Tasks
-
-Each PRD item should be small enough to complete in one context window.
-
-Right-sized:
-- Add a database column and migration
-- Add a UI component to an existing page
-- Update a server action with new logic
-
-Too big (split these):
-- "Build the entire dashboard"
-- "Add authentication"
-- "Refactor the API"
-
-### Feedback Loops
-
-Kirby only works if there are feedback loops:
-- Typecheck catches type errors
-- Tests verify behavior
-- CI must stay green
-
-### Stop Condition
-
-When all stories have `passes: true`, Kirby outputs `<promise>COMPLETE</promise>` and the loop exits.
+| `progress.txt` | Append-only learnings log |
+| `AGENTS.md` | Project patterns (Kiro auto-loads) |
+| `skills/prd/SKILL.md` | PRD generation skill |
+| `skills/kirby/SKILL.md` | PRD → JSON conversion skill |
 
 ## Debugging
 
 ```bash
-# See which stories are done
+# Story status
 cat prd.json | jq '.userStories[] | {id, title, passes}'
 
-# See learnings from previous iterations
+# What Kirby learned
 cat progress.txt
 
-# Check git history
+# Git history
 git log --oneline -10
+
+# Re-run with more iterations
+./kirby.sh 20
 ```
-
-## Customizing
-
-- Edit `prompt.md` to add project-specific quality check commands
-- Edit `.kiro/agents/kirby.json` to adjust hooks or add MCP servers
-- Add `.kiro/steering/*.md` files for project conventions
-- Update `AGENTS.md` with codebase-specific patterns
 
 ## Archiving
 
-Kirby automatically archives previous runs when you start a new feature (different `branchName`). Archives are saved to `archive/YYYY-MM-DD-feature-name/`.
+Kirby automatically archives previous runs when `branchName` changes in prd.json. Archives go to `archive/YYYY-MM-DD-feature-name/`.
 
 ## Contributing
 

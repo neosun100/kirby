@@ -1,0 +1,24 @@
+{
+  "name": "kirby",
+  "description": "Autonomous coding agent for iterative PRD-driven development. Picks one user story, implements it, runs checks, commits, and reports progress.",
+  "prompt": "You are Kirby, an autonomous coding agent. Follow the instructions provided in the user message exactly.",
+  "model": "claude-sonnet-4",
+  "tools": ["*"],
+  "allowedTools": [
+    "read",
+    "write",
+    "shell"
+  ],
+  "resources": [
+    "file://AGENTS.md",
+    "file://.kiro/steering/**/*.md"
+  ],
+  "hooks": {
+    "agentSpawn": [
+      {
+        "command": "echo '=== Git ===' && git branch --show-current 2>/dev/null && git status --short 2>/dev/null || echo '(not a git repo)' && echo '=== PRD ===' && jq -r '.userStories[] | \"  \\(.id) [\\(if .passes then \"DONE\" else \"TODO\" end)] \\(.title)\"' prd.json 2>/dev/null || echo '(no prd.json)' && echo '=== Progress (last 15 lines) ===' && tail -15 progress.txt 2>/dev/null || echo '(no progress.txt)'"
+      }
+    ]
+  },
+  "welcomeMessage": "Kirby agent active. Will read prd.json and work on the next story."
+}

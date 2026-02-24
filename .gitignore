@@ -11,3 +11,7 @@ progress.txt
 
 # Kiro
 .kiro/settings/
+
+# Logo candidates (not needed in repo)
+kirby-logo-v*.png
+kirby-logos-all.zip

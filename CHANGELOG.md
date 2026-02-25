@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.0] - 2026-02-25
+
+### Added
+- **Autopilot (Sage Mode)** — fully autonomous project bootstrapper
+  - `--autopilot "direction"`: researches the web, designs architecture, generates PRD, produces prd.json, then implements
+  - `--autopilot` (no args): pure sage mode — AI scans the project and decides everything itself
+  - Generates `tasks/research.md` (web research with sources), `tasks/architecture.md` (tech stack & design), full PRD, and executable `prd.json`
+  - Minimum 5 web searches, analyzes 3-5 reference projects, targets 8-20 atomic stories
+- `skills/autopilot/SKILL.md` — Kiro skill for autonomous research & planning
+- Heredoc-based prompt construction for reliable shell escaping
+
+### Fixed
+- `set -e` causing premature exit during autopilot phase when piped through `tee`
+- JSON format in prompts breaking bash variable assignment (quotes/braces interpreted as shell syntax)
+- Simplified kiro-cli output handling in autopilot (removed problematic `tee /dev/stderr | strip_ansi` pipeline)
+
+### Tested
+- End-to-end autopilot test: "Pomodoro Timer with Next.js 14"
+  - Autopilot researched, planned, and generated 18 user stories in ~3 minutes
+  - All 18 stories implemented autonomously in ~50 minutes (23 git commits)
+  - 42 source files, 7 test suites (14 tests), all passing
+  - TypeScript ✅, ESLint ✅, Build ✅, Jest ✅
+
 ## [1.2.0] - 2026-02-25
 
 ### Added

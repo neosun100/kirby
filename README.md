@@ -72,6 +72,36 @@ Based on [Geoffrey Huntley's Ralph pattern](https://ghuntley.com/ralph/), redesi
 | Project knowledge | CLAUDE.md / prompt.md only | **Steering files** + AGENTS.md + Hooks |
 | MCP support | Limited | **Native** |
 
+## 🧠 Autopilot (Sage Mode)
+
+Let Kirby research, plan, and build — from a vague idea to a complete project.
+
+```bash
+# Give a direction — Kirby researches the web, designs architecture, generates PRD, then builds
+./kirby.sh --autopilot "Build a real-time chat app with WebSocket and React"
+
+# Pure sage mode — Kirby scans the project and decides everything itself
+./kirby.sh --autopilot
+```
+
+### What Autopilot Does
+
+1. **Research** — Searches the web for best practices, reference projects, tech stack recommendations (saves to `tasks/research.md`)
+2. **Architecture** — Designs the system based on research (saves to `tasks/architecture.md`)
+3. **PRD** — Writes a full Product Requirements Document (saves to `tasks/prd-*.md`)
+4. **Plan** — Converts PRD to 8-20 atomic user stories in `prd.json`
+5. **Build** — Enters the normal Kirby loop and implements every story
+
+### Autopilot Test Results
+
+Tested with "Build a Pomodoro Timer with Next.js 14":
+
+| Phase | Time | Output |
+|-------|------|--------|
+| Research & Planning | ~3 min | research.md, architecture.md, PRD, prd.json (18 stories) |
+| Implementation | ~50 min | 42 source files, 23 git commits |
+| Quality | All pass | TypeScript ✅ ESLint ✅ Build ✅ Jest (14 tests) ✅ |
+
 ## 📋 Prerequisites
 
 | Requirement | Install |
@@ -113,6 +143,7 @@ cp /path/to/kirby/prd.json.example prd.json
 
 Options:
   --tool kiro|amp|claude   AI tool (default: kiro)
+  --autopilot [direction]  Sage mode: research, plan, and build from scratch
   --help                   Show help
 
 Arguments:
@@ -124,6 +155,8 @@ Arguments:
 ./kirby.sh 20              # Kiro, 20 iterations
 ./kirby.sh --tool amp 5    # Amp, 5 iterations
 ./kirby.sh --tool claude   # Claude Code, 10 iterations
+./kirby.sh --autopilot "build a task management app"  # Autopilot with direction
+./kirby.sh --autopilot     # Pure sage mode
 ```
 
 ## 🔄 Complete Workflow
@@ -442,7 +475,7 @@ Kiro natively supports the [AGENTS.md standard](https://agents.md/). Kirby updat
 
 ```
 kirby/
-├── kirby.sh                    # Main loop script
+├── kirby.sh                    # Main loop script (supports --autopilot)
 ├── prompt.md                   # Per-iteration AI instructions
 ├── AGENTS.md                   # Project patterns (Kiro auto-loads)
 ├── prd.json.example            # Example PRD format
@@ -450,6 +483,7 @@ kirby/
 │   └── agents/
 │       └── kirby.json          # Kiro custom agent config
 ├── skills/
+│   ├── autopilot/SKILL.md      # Autonomous research & planning skill
 │   ├── prd/SKILL.md            # PRD generation skill
 │   └── kirby/SKILL.md          # PRD → JSON conversion skill
 ├── docs/

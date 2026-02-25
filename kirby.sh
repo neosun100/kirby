@@ -2,8 +2,20 @@
 # Kirby - Autonomous AI agent loop for Kiro CLI
 # Based on the Ralph pattern by Geoffrey Huntley, adapted for Kiro by design.
 # Usage: ./kirby.sh [--tool kiro|amp|claude] [max_iterations]
+# Version: 1.4.0
 
 set -e
+
+KIRBY_VERSION="1.4.0"
+
+# --- Cleanup on exit ---
+CLEANUP_FILES=()
+cleanup() {
+  for f in "${CLEANUP_FILES[@]}"; do
+    rm -f "$f"
+  done
+}
+trap cleanup EXIT INT TERM
 
 # --- Usage ---
 usage() {
@@ -13,6 +25,7 @@ Usage: ./kirby.sh [OPTIONS] [max_iterations]
 Options:
   --tool kiro|amp|claude   AI tool to use (default: kiro)
   --autopilot [direction]  Sage mode: research, plan, and build from scratch
+  --version                Show version
   --help                   Show this help message
 
 Arguments:
@@ -37,6 +50,10 @@ while [[ $# -gt 0 ]]; do
   case $1 in
     --help|-h)
       usage
+      ;;
+    --version|-v)
+      echo "Kirby v${KIRBY_VERSION}"
+      exit 0
       ;;
     --tool)
       TOOL="$2"
@@ -103,6 +120,7 @@ if [ -n "$AUTOPILOT" ] && [ ! -f "$PRD_FILE" ]; then
   mkdir -p "$SCRIPT_DIR/tasks"
 
   AUTOPILOT_PROMPT_FILE=$(mktemp)
+  CLEANUP_FILES+=("$AUTOPILOT_PROMPT_FILE")
   if [ "$AUTOPILOT" = "__SAGE__" ]; then
     cat > "$AUTOPILOT_PROMPT_FILE" << 'AUTOPILOT_EOF'
 You are in Kirby Autopilot (Sage Mode). No user requirements were given.
@@ -127,10 +145,10 @@ CRITICAL: prd.json MUST follow this exact structure with keys: project, branchNa
 Be bold. Be thorough. Make every decision yourself. Do NOT ask the user anything.
 AUTOPILOT_EOF
   else
-    cat > "$AUTOPILOT_PROMPT_FILE" << AUTOPILOT_EOF
+    cat > "$AUTOPILOT_PROMPT_FILE" << 'AUTOPILOT_EOF'
 You are in Kirby Autopilot mode. The user direction:
 
-$AUTOPILOT
+__USER_DIRECTION__
 
 Your mission:
 1. Scan the current project directory — understand what exists
@@ -150,6 +168,9 @@ CRITICAL: prd.json MUST follow this exact structure with keys: project, branchNa
 
 Be thorough in research. Make decisions confidently. Do NOT ask the user anything.
 AUTOPILOT_EOF
+    # Safely inject user direction without shell expansion
+    ESCAPED_DIRECTION=$(printf '%s\n' "$AUTOPILOT" | sed 's/[&/\]/\\&/g')
+    sed -i "s|__USER_DIRECTION__|${ESCAPED_DIRECTION}|g" "$AUTOPILOT_PROMPT_FILE"
   fi
   AUTOPILOT_PROMPT=$(cat "$AUTOPILOT_PROMPT_FILE")
   rm -f "$AUTOPILOT_PROMPT_FILE"
@@ -162,11 +183,11 @@ AUTOPILOT_EOF
     if [ -f ".kiro/agents/kirby.json" ] || [ -f "$HOME/.kiro/agents/kirby.json" ]; then
       AGENT_FLAG="--agent kirby"
     fi
-    kiro-cli chat --no-interactive --trust-all-tools --wrap=never $AGENT_FLAG "$AUTOPILOT_PROMPT" 2>&1 || true
+    kiro-cli chat --no-interactive --trust-all-tools --wrap=never ${AGENT_FLAG:+"$AGENT_FLAG"} "$AUTOPILOT_PROMPT" 2>&1 || true
   elif [[ "$TOOL" == "amp" ]]; then
-    echo "$AUTOPILOT_PROMPT" | amp --dangerously-allow-all 2>&1 | tee /dev/stderr > /dev/null || true
+    printf '%s\n' "$AUTOPILOT_PROMPT" | amp --dangerously-allow-all 2>&1 | tee /dev/stderr > /dev/null || true
   else
-    claude --dangerously-skip-permissions --print <<< "$AUTOPILOT_PROMPT" 2>&1 | tee /dev/stderr > /dev/null || true
+    printf '%s\n' "$AUTOPILOT_PROMPT" | claude --dangerously-skip-permissions --print 2>&1 | tee /dev/stderr > /dev/null || true
   fi
 
   set -e
@@ -236,9 +257,9 @@ strip_ansi() {
 }
 
 # --- Main loop ---
-echo "Starting Kirby - Tool: $TOOL - Max iterations: $MAX_ITERATIONS"
+echo "Starting Kirby v${KIRBY_VERSION} - Tool: $TOOL - Max iterations: $MAX_ITERATIONS"
 
-for i in $(seq 1 $MAX_ITERATIONS); do
+for ((i=1; i<=MAX_ITERATIONS; i++)); do
   echo ""
   echo "==============================================================="
   echo "  Kirby Iteration $i of $MAX_ITERATIONS ($TOOL)"
@@ -253,11 +274,11 @@ for i in $(seq 1 $MAX_ITERATIONS); do
     if [ -f ".kiro/agents/kirby.json" ] || [ -f "$HOME/.kiro/agents/kirby.json" ]; then
       AGENT_FLAG="--agent kirby"
     fi
-    OUTPUT=$(kiro-cli chat --no-interactive --trust-all-tools --wrap=never $AGENT_FLAG "$PROMPT_CONTENT" 2>&1 | tee /dev/stderr | strip_ansi) || true
+    OUTPUT=$(kiro-cli chat --no-interactive --trust-all-tools --wrap=never ${AGENT_FLAG:+"$AGENT_FLAG"} "$PROMPT_CONTENT" 2>&1 | tee /dev/stderr | strip_ansi) || true
   elif [[ "$TOOL" == "amp" ]]; then
-    OUTPUT=$(echo "$PROMPT_CONTENT" | amp --dangerously-allow-all 2>&1 | tee /dev/stderr) || true
+    OUTPUT=$(printf '%s\n' "$PROMPT_CONTENT" | amp --dangerously-allow-all 2>&1 | tee /dev/stderr | strip_ansi) || true
   else
-    OUTPUT=$(claude --dangerously-skip-permissions --print <<< "$PROMPT_CONTENT" 2>&1 | tee /dev/stderr) || true
+    OUTPUT=$(printf '%s\n' "$PROMPT_CONTENT" | claude --dangerously-skip-permissions --print 2>&1 | tee /dev/stderr | strip_ansi) || true
   fi
 
   if echo "$OUTPUT" | grep -q "<promise>COMPLETE</promise>"; then
@@ -279,4 +300,4 @@ echo "  Kirby reached max iterations ($MAX_ITERATIONS)."
 echo "  Check progress: cat $PROGRESS_FILE"
 echo "  Check PRD:      cat $PRD_FILE | jq '.userStories[] | {id, passes}'"
 echo "==============================================================="
-exit 1
+exit 2

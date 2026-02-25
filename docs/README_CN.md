@@ -143,6 +143,8 @@ cp /path/to/kirby/prd.json.example prd.json
 
 选项:
   --tool kiro|amp|claude   AI 工具（默认: kiro）
+  --autopilot [direction]  自驱模式: 搜索、研究、规划、开发
+  --version                显示版本
   --help                   显示帮助
 
 参数:
@@ -154,6 +156,8 @@ cp /path/to/kirby/prd.json.example prd.json
 ./kirby.sh 20              # Kiro，20 次迭代
 ./kirby.sh --tool amp 5    # Amp，5 次迭代
 ./kirby.sh --tool claude   # Claude Code，10 次迭代
+./kirby.sh --autopilot "用 Next.js 14 构建聊天应用"  # 自驱模式
+./kirby.sh --autopilot     # 纯圣人模式
 ```
 
 ## 🔄 完整工作流
@@ -400,9 +404,14 @@ kirby/
 ├── prompt.md                   # 每次迭代的 AI 指令
 ├── AGENTS.md                   # 项目模式（Kiro 自动加载）
 ├── prd.json.example            # PRD 格式示例
-├── .kiro/agents/kirby.json     # Kiro 自定义 agent 配置
-├── skills/prd/SKILL.md         # PRD 生成 skill
-├── skills/kirby/SKILL.md       # PRD → JSON 转换 skill
+├── .kiro/
+│   ├── agents/kirby.json       # Kiro 自定义 agent 配置
+│   └── steering/               # Steering 文件目录（Kiro 自动加载）
+│       └── example.md          # 示例 steering 文件
+├── skills/
+│   ├── prd/SKILL.md            # PRD 生成 skill
+│   ├── kirby/SKILL.md          # PRD → JSON 转换 skill
+│   └── autopilot/SKILL.md      # 自驱研究与规划 skill
 ├── docs/README_CN.md           # 中文文档
 ├── CHANGELOG.md                # 变更日志
 ├── CONTRIBUTING.md             # 贡献指南
@@ -420,7 +429,13 @@ git log --oneline -10                                       # git 历史
 
 ## 📄 许可证
 
-[MIT](../LICENSE) © 2026
+[MIT](../LICENSE) © 2026 neosun100
+
+## 🤝 贡献
+
+欢迎贡献！请查看 [CONTRIBUTING.md](../CONTRIBUTING.md) 了解详情。
+
+变更日志：[CHANGELOG.md](../CHANGELOG.md)
 
 ## 🔗 参考链接
 

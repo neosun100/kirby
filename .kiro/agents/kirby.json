@@ -16,7 +16,7 @@
   "hooks": {
     "agentSpawn": [
       {
-        "command": "echo '=== Git ===' && git branch --show-current 2>/dev/null && git status --short 2>/dev/null || echo '(not a git repo)' && echo '=== PRD ===' && jq -r '.userStories[] | \"  \\(.id) [\\(if .passes then \"DONE\" else \"TODO\" end)] \\(.title)\"' prd.json 2>/dev/null || echo '(no prd.json)' && echo '=== Progress (last 15 lines) ===' && tail -15 progress.txt 2>/dev/null || echo '(no progress.txt)'"
+        "command": "echo '=== Git ===' && (git branch --show-current 2>/dev/null && git status --short 2>/dev/null || echo '(not a git repo)') && echo '=== PRD ===' && (jq -r '.userStories[] | \"  \\(.id) [\\(if .passes then \"DONE\" else \"TODO\" end)] \\(.title)\"' prd.json 2>/dev/null || echo '(no prd.json)') && echo '=== Progress (last 15 lines) ===' && (tail -15 progress.txt 2>/dev/null || echo '(no progress.txt)')"
       }
     ]
   },

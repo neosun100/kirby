@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.4.0] - 2026-02-25
+
+### Added
+- `--version` flag to display Kirby version
+- Signal handling (trap) — clean up temp files on Ctrl+C / exit
+- `.kiro/steering/example.md` — sample steering file for users
+- `tasks/.gitkeep` — ensure tasks directory exists for autopilot
+- `.editorconfig` — consistent formatting across editors
+
+### Fixed
+- **Security**: Autopilot heredoc injection — user direction now safely escaped instead of shell-expanded
+- **Robustness**: `strip_ansi` now applied to all tool outputs (amp, claude), not just kiro — fixes COMPLETE signal detection
+- **Robustness**: `printf '%s\n'` replaces `echo` for variable content — prevents escape sequence issues
+- **Robustness**: `agentSpawn` hook command uses proper subshell grouping — all sections now execute regardless of individual failures
+- **Robustness**: `seq` replaced with bash `for (( ))` loop
+- **Robustness**: `$AGENT_FLAG` properly quoted with `${AGENT_FLAG:+"$AGENT_FLAG"}`
+- Max iteration exit code changed from 1 to 2 (distinguishes from errors)
+- `kirby.json` model reset to `claude-sonnet-4` (accessible to all users)
+- LICENSE now includes author name (neosun100)
+- CONTRIBUTING.md updated: Bash 4+ requirement (not POSIX), code guidelines added
+- Chinese docs (README_CN.md) synced: `--autopilot` in usage, autopilot skill in project tree, contributing links
+
 ## [1.3.0] - 2026-02-25
 
 ### Added
@@ -64,3 +86,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `skills/kirby/SKILL.md` — PRD → JSON conversion skill
 - Dependency checking, `--help`, prd.json existence check
 - Automatic archiving, ANSI stripping, COMPLETE signal detection
+
+[1.4.0]: https://github.com/neosun100/kirby/compare/v1.3.0...v1.4.0
+[1.3.0]: https://github.com/neosun100/kirby/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/neosun100/kirby/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/neosun100/kirby/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/neosun100/kirby/releases/tag/v1.0.0

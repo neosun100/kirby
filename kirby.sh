@@ -102,8 +102,10 @@ if [ -n "$AUTOPILOT" ] && [ ! -f "$PRD_FILE" ]; then
 
   mkdir -p "$SCRIPT_DIR/tasks"
 
+  AUTOPILOT_PROMPT_FILE=$(mktemp)
   if [ "$AUTOPILOT" = "__SAGE__" ]; then
-    AUTOPILOT_PROMPT="You are in Kirby Autopilot (Sage Mode). No user requirements were given.
+    cat > "$AUTOPILOT_PROMPT_FILE" << 'AUTOPILOT_EOF'
+You are in Kirby Autopilot (Sage Mode). No user requirements were given.
 
 Your mission:
 1. Scan the current project directory thoroughly — read every file, understand what exists
@@ -118,18 +120,22 @@ Your mission:
 5. Design the architecture and save to tasks/architecture.md
 6. Write a full PRD and save to tasks/prd-[project-name].md
 7. Convert to prd.json in the project root with 8-20 atomic user stories
-8. Validate: run 'jq . prd.json' to ensure valid JSON
+8. Validate: run jq . prd.json to ensure valid JSON
 
-Be bold. Be thorough. Make every decision yourself. Do NOT ask the user anything."
+CRITICAL: prd.json MUST follow this exact structure with keys: project, branchName, description, userStories (array). Each story needs: id (US-001 format), title, description, acceptanceCriteria (array of strings), priority (number), passes (false), notes (empty string). Stories must be ordered by dependency (setup then schema then backend then frontend then polish). Target 8-20 stories.
+
+Be bold. Be thorough. Make every decision yourself. Do NOT ask the user anything.
+AUTOPILOT_EOF
   else
-    AUTOPILOT_PROMPT="You are in Kirby Autopilot mode. The user's direction:
+    cat > "$AUTOPILOT_PROMPT_FILE" << AUTOPILOT_EOF
+You are in Kirby Autopilot mode. The user direction:
 
-\"$AUTOPILOT\"
+$AUTOPILOT
 
 Your mission:
 1. Scan the current project directory — understand what exists
 2. Search the web extensively (at least 5 searches) to research:
-   - Best practices for building: $AUTOPILOT
+   - Best practices for building this type of project
    - Top 3-5 reference projects on GitHub in this domain
    - Recommended tech stack for 2025-2026
    - Common pitfalls to avoid
@@ -138,11 +144,17 @@ Your mission:
 4. Design the architecture and save to tasks/architecture.md
 5. Write a full PRD and save to tasks/prd-[project-name].md
 6. Convert to prd.json in the project root with 8-20 atomic user stories
-7. Validate: run 'jq . prd.json' to ensure valid JSON
+7. Validate: run jq . prd.json to ensure valid JSON
 
-Be thorough in research. Make decisions confidently. Do NOT ask the user anything."
+CRITICAL: prd.json MUST follow this exact structure with keys: project, branchName, description, userStories (array). Each story needs: id (US-001 format), title, description, acceptanceCriteria (array of strings), priority (number), passes (false), notes (empty string). Stories must be ordered by dependency (setup then schema then backend then frontend then polish). Target 8-20 stories.
+
+Be thorough in research. Make decisions confidently. Do NOT ask the user anything.
+AUTOPILOT_EOF
   fi
+  AUTOPILOT_PROMPT=$(cat "$AUTOPILOT_PROMPT_FILE")
+  rm -f "$AUTOPILOT_PROMPT_FILE"
 
+  set +e
   echo "Running autopilot research & planning phase..."
 
   if [[ "$TOOL" == "kiro" ]]; then
@@ -150,13 +162,14 @@ Be thorough in research. Make decisions confidently. Do NOT ask the user anythin
     if [ -f ".kiro/agents/kirby.json" ] || [ -f "$HOME/.kiro/agents/kirby.json" ]; then
       AGENT_FLAG="--agent kirby"
     fi
-    kiro-cli chat --no-interactive --trust-all-tools --wrap=never $AGENT_FLAG "$AUTOPILOT_PROMPT" 2>&1 | tee /dev/stderr | strip_ansi > /dev/null || true
+    kiro-cli chat --no-interactive --trust-all-tools --wrap=never $AGENT_FLAG "$AUTOPILOT_PROMPT" 2>&1 || true
   elif [[ "$TOOL" == "amp" ]]; then
     echo "$AUTOPILOT_PROMPT" | amp --dangerously-allow-all 2>&1 | tee /dev/stderr > /dev/null || true
   else
     claude --dangerously-skip-permissions --print <<< "$AUTOPILOT_PROMPT" 2>&1 | tee /dev/stderr > /dev/null || true
   fi
 
+  set -e
   if [ ! -f "$PRD_FILE" ]; then
     echo "Error: Autopilot failed to generate prd.json"
     echo "Check tasks/ directory for partial output."

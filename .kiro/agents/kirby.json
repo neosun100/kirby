@@ -2,7 +2,7 @@
   "name": "kirby",
   "description": "Autonomous coding agent for iterative PRD-driven development. Picks one user story, implements it, runs checks, commits, and reports progress.",
   "prompt": "You are Kirby, an autonomous coding agent. Follow the instructions provided in the user message exactly.",
-  "model": "claude-sonnet-4",
+  "model": "claude-opus-4-6-1m",
   "tools": ["*"],
   "allowedTools": [
     "read",

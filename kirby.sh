@@ -12,6 +12,7 @@ Usage: ./kirby.sh [OPTIONS] [max_iterations]
 
 Options:
   --tool kiro|amp|claude   AI tool to use (default: kiro)
+  --autopilot [direction]  Sage mode: research, plan, and build from scratch
   --help                   Show this help message
 
 Arguments:
@@ -21,6 +22,8 @@ Examples:
   ./kirby.sh               # Kiro, 10 iterations
   ./kirby.sh 20            # Kiro, 20 iterations
   ./kirby.sh --tool amp 5  # Amp, 5 iterations
+  ./kirby.sh --autopilot "build a task management app with Next.js"
+  ./kirby.sh --autopilot   # Pure sage mode, AI decides everything
 EOF
   exit 0
 }
@@ -28,6 +31,7 @@ EOF
 # --- Parse arguments ---
 TOOL="kiro"
 MAX_ITERATIONS=10
+AUTOPILOT=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -41,6 +45,15 @@ while [[ $# -gt 0 ]]; do
     --tool=*)
       TOOL="${1#*=}"
       shift
+      ;;
+    --autopilot)
+      if [[ -n "$2" && ! "$2" =~ ^-- && ! "$2" =~ ^[0-9]+$ ]]; then
+        AUTOPILOT="$2"
+        shift 2
+      else
+        AUTOPILOT="__SAGE__"
+        shift
+      fi
       ;;
     *)
       if [[ "$1" =~ ^[0-9]+$ ]]; then
@@ -81,6 +94,88 @@ ARCHIVE_DIR="$SCRIPT_DIR/archive"
 LAST_BRANCH_FILE="$SCRIPT_DIR/.last-branch"
 
 # --- Check prd.json exists ---
+if [ -n "$AUTOPILOT" ] && [ ! -f "$PRD_FILE" ]; then
+  echo ""
+  echo "==============================================================="
+  echo "  Kirby Autopilot — Sage Mode"
+  echo "==============================================================="
+
+  mkdir -p "$SCRIPT_DIR/tasks"
+
+  if [ "$AUTOPILOT" = "__SAGE__" ]; then
+    AUTOPILOT_PROMPT="You are in Kirby Autopilot (Sage Mode). No user requirements were given.
+
+Your mission:
+1. Scan the current project directory thoroughly — read every file, understand what exists
+2. Based on what you find (or if the project is empty), DECIDE what this project should become
+3. Search the web extensively (at least 5 searches) to research:
+   - Best practices for this type of project
+   - Top 3-5 reference projects on GitHub in this domain
+   - Recommended tech stack for 2025-2026
+   - Common pitfalls to avoid
+   - UI/UX patterns if applicable
+4. Save your research to tasks/research.md (with source URLs)
+5. Design the architecture and save to tasks/architecture.md
+6. Write a full PRD and save to tasks/prd-[project-name].md
+7. Convert to prd.json in the project root with 8-20 atomic user stories
+8. Validate: run 'jq . prd.json' to ensure valid JSON
+
+Be bold. Be thorough. Make every decision yourself. Do NOT ask the user anything."
+  else
+    AUTOPILOT_PROMPT="You are in Kirby Autopilot mode. The user's direction:
+
+\"$AUTOPILOT\"
+
+Your mission:
+1. Scan the current project directory — understand what exists
+2. Search the web extensively (at least 5 searches) to research:
+   - Best practices for building: $AUTOPILOT
+   - Top 3-5 reference projects on GitHub in this domain
+   - Recommended tech stack for 2025-2026
+   - Common pitfalls to avoid
+   - UI/UX patterns if applicable
+3. Save your research to tasks/research.md (with source URLs)
+4. Design the architecture and save to tasks/architecture.md
+5. Write a full PRD and save to tasks/prd-[project-name].md
+6. Convert to prd.json in the project root with 8-20 atomic user stories
+7. Validate: run 'jq . prd.json' to ensure valid JSON
+
+Be thorough in research. Make decisions confidently. Do NOT ask the user anything."
+  fi
+
+  echo "Running autopilot research & planning phase..."
+
+  if [[ "$TOOL" == "kiro" ]]; then
+    AGENT_FLAG=""
+    if [ -f ".kiro/agents/kirby.json" ] || [ -f "$HOME/.kiro/agents/kirby.json" ]; then
+      AGENT_FLAG="--agent kirby"
+    fi
+    kiro-cli chat --no-interactive --trust-all-tools --wrap=never $AGENT_FLAG "$AUTOPILOT_PROMPT" 2>&1 | tee /dev/stderr | strip_ansi > /dev/null || true
+  elif [[ "$TOOL" == "amp" ]]; then
+    echo "$AUTOPILOT_PROMPT" | amp --dangerously-allow-all 2>&1 | tee /dev/stderr > /dev/null || true
+  else
+    claude --dangerously-skip-permissions --print <<< "$AUTOPILOT_PROMPT" 2>&1 | tee /dev/stderr > /dev/null || true
+  fi
+
+  if [ ! -f "$PRD_FILE" ]; then
+    echo "Error: Autopilot failed to generate prd.json"
+    echo "Check tasks/ directory for partial output."
+    exit 1
+  fi
+
+  echo ""
+  echo "==============================================================="
+  echo "  Autopilot complete! PRD generated with $(jq '.userStories | length' "$PRD_FILE" 2>/dev/null || echo '?') stories"
+  echo "  Research: tasks/research.md"
+  echo "  Architecture: tasks/architecture.md"
+  echo "  PRD: tasks/prd-*.md"
+  echo "  Executable: prd.json"
+  echo "==============================================================="
+  echo ""
+  echo "Starting implementation phase..."
+  sleep 2
+fi
+
 if [ ! -f "$PRD_FILE" ]; then
   echo "Error: prd.json not found at $PRD_FILE"
   echo "Create one from prd.json.example or use the kirby skill to generate it."
